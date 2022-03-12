@@ -4,4 +4,4 @@
 rm init
 
 # This just builds our init system, statically linked.
-gcc -static-libgcc -o init main.c
+gcc -o init main.c
