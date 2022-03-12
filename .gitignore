@@ -51,5 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Ignore init build output
+# Our stuff
 init/init
+bootdisk/*
+initrd.img
