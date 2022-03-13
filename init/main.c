@@ -7,6 +7,7 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <net/if.h>
+#include <sys/reboot.h>
 
 void spinwait()
 {
@@ -19,7 +20,7 @@ void spinwait()
 }
 
 // A helper method to run a command, and direct stdout to the VM output.
-void run(char *cmd)
+void run_with_stdout(char *cmd)
 {
     FILE *fp;
     char path[1035];
@@ -38,6 +39,12 @@ void run(char *cmd)
 
     pclose(fp);
 }
+
+void terminate_system()
+{
+    reboot(RB_POWER_OFF);
+}
+
 // Now the main part of the show...
 // For now we endlessly print stuff.
 int main()
@@ -80,6 +87,10 @@ int main()
 
     // -L indicates the location of seabios
     // -nic none disables networking support (for now) as we don't have network support (yet)
-    run("/bin/qemu-system-x86_64 -nographic -nic none -L /usr/share/bios/ 2>&1");
-    spinwait();
+    // Now delegate directly to the operating system (no need to buffer)
+    system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/FD13LIVE.iso -L /usr/share/bios/ 2>&1");
+
+    terminate_system();
+
+    return 0;
 }

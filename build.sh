@@ -107,6 +107,11 @@ function build_image() {
 
     chmod +x bin/ls bin/qemu-system-x86_64 bin/sh
 
+    # Copy images
+    mkdir -p opt/images
+    cp ../images/* opt/images
+
+
     # Recreate the ramdisk
     find . | cpio --quiet -H newc -o | gzip -9 -n > ../initrd.img
     cd ../
