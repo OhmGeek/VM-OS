@@ -44,8 +44,7 @@ function build_image() {
 
     # Delete ./init as we will replace this with our own.
     rm ./init
-    # cp ../init/init ./init
-    cp /bin/vim ./init
+    cp ../init/init ./init
 
     # Recreate the ramdisk
     find . | cpio --quiet -H newc -o | gzip -9 -n > ../initrd.img
