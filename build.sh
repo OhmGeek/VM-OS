@@ -50,23 +50,63 @@ function build_image() {
     # Before we copy xemu-system-x86_64, copy all libraries
     mkdir lib64
     mkdir bin
+    mkdir lib
+    mkdir -p usr/share/qemu
+    mkdir -p usr/share/bios
+    mkdir -p usr/share/ipxe
+    mkdir -p usr/share/ipxe.efi
     # List the dynamic libraries required
-    LIBS=$(ldd /usr/bin/qemu-system-x86_64 | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
+    QEMU_LIBS=$(ldd /usr/bin/qemu-system-x86_64 | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
 
-    echo "Copying ${LIBS} from system to OS."
-    for LIB in ${LIBS}
+    echo "Copying ${QEMU_LIBS} from system to OS."
+    for LIB in ${QEMU_LIBS}
     do
         cp "/lib64/${LIB}" "lib64/${LIB}"
     done
 
+    # Copy /lib64/qemu/* to add acceleration libraries
+    mkdir lib64/qemu
+    cp /lib64/qemu/* lib64/qemu
+
+    # Copy firmware
+    cp -r /usr/share/qemu/* usr/share/qemu
+
+    # Copy bios
+    cp /usr/share/seabios/* usr/share/bios
+    cp /usr/share/seavgabios/* usr/share/bios
+
+    # Copy firmware
+    cp -r /usr/share/ipxe/* usr/share/ipxe
+    cp -r /usr/share/ipxe.efi/* usr/share/ipxe.efi
+
     # This is needed for /bin/sh, required to call popen
     cp /lib64/libtinfo.so.6 lib64/libtinfo.so.6
+
+    MODPROBE_LIBS=$(ldd /usr/sbin/modprobe | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
+
+    echo "Copying ${MODPROBE_LIBS} from system to OS."
+    for LIB in ${MODPROBE_LIBS}
+    do
+        cp "/lib64/${LIB}" "lib64/${LIB}"
+    done
+
+
+    LS_LIBS=$(ldd /bin/ls | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
+
+    echo "Copying ${LS_LIBS} from system to OS."
+    for LIB in ${LS_LIBS}
+    do
+        cp "/lib64/${LIB}" "lib64/${LIB}"
+    done
 
     cp /usr/bin/qemu-system-x86_64 bin/qemu-system-x86_64
     cp /bin/ls bin/ls
     cp /bin/sh bin/sh
     cp /bin/cat bin/cat
+    cp /usr/sbin/modprobe bin/modprobe
+
     chmod +x bin/ls bin/qemu-system-x86_64 bin/sh
+
     # Recreate the ramdisk
     find . | cpio --quiet -H newc -o | gzip -9 -n > ../initrd.img
     cd ../
