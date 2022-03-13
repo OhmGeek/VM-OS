@@ -56,3 +56,6 @@ init/init
 bootdisk/*
 initrd.img
 bzImage
+
+# Ignore ISO images (we don't want these to be public).
+*.iso
