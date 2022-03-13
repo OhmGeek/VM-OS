@@ -20,6 +20,17 @@ function build_init() {
     cd ../
 }
 
+function copy_linked_libs() {
+    LIBS=$(ldd $1 | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
+
+    echo "Copying ${LIBS} from system to OS."
+    for LIB in ${LIBS}
+    do
+        cp "/lib64/${LIB}" "lib64/${LIB}"
+    done
+
+}
+
 function build_linux() {
     if [ -f linux/arch/${LINUX_ARCH}/boot/bzImage ]; then
         echo "Skipping linux build, as bzImage already exists."
@@ -55,14 +66,8 @@ function build_image() {
     mkdir -p usr/share/bios
     mkdir -p usr/share/ipxe
     mkdir -p usr/share/ipxe.efi
-    # List the dynamic libraries required
-    QEMU_LIBS=$(ldd /usr/bin/qemu-system-x86_64 | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
-
-    echo "Copying ${QEMU_LIBS} from system to OS."
-    for LIB in ${QEMU_LIBS}
-    do
-        cp "/lib64/${LIB}" "lib64/${LIB}"
-    done
+    
+    copy_linked_libs "/usr/bin/qemu-system-x86_64"
 
     # Copy /lib64/qemu/* to add acceleration libraries
     mkdir lib64/qemu
@@ -79,26 +84,39 @@ function build_image() {
     cp -r /usr/share/ipxe/* usr/share/ipxe
     cp -r /usr/share/ipxe.efi/* usr/share/ipxe.efi
 
+    # Copy drivers for vga
+    cp /lib64/libgbm.so.1 lib64/libgbm.so.1 
+    cp /lib64/libgtk-3.so.0 lib64/libgtk-3.so.0
+    cp /lib64/libSDL2-2.0.so.0 lib64/libSDL2-2.0.so.0 
+    cp /lib64/libepoxy.so.0 lib64/libepoxy.so.0
+    cp /lib64/libgdk-3.so.0 lib64/libgdk-3.so.0
+    cp /lib64/libSDL2_image-2.0.so.0 lib64/libSDL2_image-2.0.so.0
+    cp /lib64/libdrm.so.2 lib64/libdrm.so.2 
+    cp /lib64/libcairo.so.2 lib64/libcairo.so.2
+    cp /lib64/libX11.so.6 lib64/libX11.so.6
+    cp /lib64/libwayland-server.so.0 lib64/libwayland-server.so.0 
+    cp /lib64/libtiff.so.5 lib64/libtiff.so.5 
+    cp /lib64/libgdk_pixbuf-2.0.so.0 lib64/libgdk_pixbuf-2.0.so.0 
+    cp /lib64/libexpat.so.1 lib64/libexpat.so.1 
+    cp /lib64/libvte-2.91.so.0 lib64/libvte-2.91.so.0 
+    cp /lib64/libwebp.so.7 lib64/libwebp.so.7 
+    cp /lib64/libpangocairo-1.0.so.0 lib64/libpangocairo-1.0.so.0 
+    cp /lib64/libxcb.so.1 lib64/libxcb.so.1
+    cp /lib64/libjbig.so.2.1 lib64/libjbig.so.2.1
+    cp /lib64/libpango-1.0.so.0 lib64/libpango-1.0.so.0
+    cp /lib64/libharfbuzz.so.0 lib64/libharfbuzz.so.0 
+    cp /lib64/libXau.so.6 lib64/libXau.so.6 
+    cp /lib64/libpangoft2-1.0.so.0 lib64/libpangoft2-1.0.so.0 
+    cp /lib64/libfontconfig.so.1 lib64/libfontconfig.so.1 
+    cp /lib64/libfribidi.so.0 lib64/libfribidi.so.0 
+    cp /lib64/libcairo* lib64
+
     # This is needed for /bin/sh, required to call popen
     cp /lib64/libtinfo.so.6 lib64/libtinfo.so.6
 
-    MODPROBE_LIBS=$(ldd /usr/sbin/modprobe | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
-
-    echo "Copying ${MODPROBE_LIBS} from system to OS."
-    for LIB in ${MODPROBE_LIBS}
-    do
-        cp "/lib64/${LIB}" "lib64/${LIB}"
-    done
-
-
-    LS_LIBS=$(ldd /bin/ls | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
-
-    echo "Copying ${LS_LIBS} from system to OS."
-    for LIB in ${LS_LIBS}
-    do
-        cp "/lib64/${LIB}" "lib64/${LIB}"
-    done
-
+    copy_linked_libs "/usr/sbin/modprobe"
+    copy_linked_libs "/bin/ls"
+   
     cp /usr/bin/qemu-system-x86_64 bin/qemu-system-x86_64
     cp /bin/ls bin/ls
     cp /bin/sh bin/sh

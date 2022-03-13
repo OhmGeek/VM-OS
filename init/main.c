@@ -87,10 +87,11 @@ int main()
 
     // -L indicates the location of seabios
     // -nic none disables networking support (for now) as we don't have network support (yet)
-    // Now delegate directly to the operating system (no need to buffer)
-    system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/FD13LIVE.iso -L /usr/share/bios/ 2>&1");
+    // We use shell expansion to load the ISO image present in images/. (TODO: add better configuration options)    
+    system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/*.iso -L /usr/share/bios/ 2>&1");
 
-    terminate_system();
+    // terminate_system();
+    spinwait();
 
     return 0;
 }
