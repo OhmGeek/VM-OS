@@ -47,11 +47,30 @@ function build_image() {
 
     cp ../init/init ./init
 
+    # Before we copy xemu-system-x86_64, copy all libraries
+    mkdir lib64
+    mkdir bin
+    # List the dynamic libraries required
+    LIBS=$(ldd /usr/bin/qemu-system-x86_64 | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
+
+    echo "Copying ${LIBS} from system to OS."
+    for LIB in ${LIBS}
+    do
+        cp "/lib64/${LIB}" "lib64/${LIB}"
+    done
+
+    # This is needed for /bin/sh, required to call popen
+    cp /lib64/libtinfo.so.6 lib64/libtinfo.so.6
+
+    cp /usr/bin/qemu-system-x86_64 bin/qemu-system-x86_64
+    cp /bin/ls bin/ls
+    cp /bin/sh bin/sh
+    cp /bin/cat bin/cat
+    chmod +x bin/ls bin/qemu-system-x86_64 bin/sh
     # Recreate the ramdisk
     find . | cpio --quiet -H newc -o | gzip -9 -n > ../initrd.img
     cd ../
 }
-
 
 print_options
 ## Start by cleaning
