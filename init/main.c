@@ -1,4 +1,9 @@
+#define _XOPEN_SOURCE 700
+
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdlib.h>
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -8,6 +13,7 @@
 #include <sys/wait.h>
 #include <net/if.h>
 #include <sys/reboot.h>
+#include <string.h>
 
 void spinwait()
 {
@@ -17,6 +23,35 @@ void spinwait()
         sleep(10);
         wait(0);
     }
+}
+
+void create_passwd_file()
+{
+    //
+    FILE *fp;
+    fp = fopen("/etc/passwd", "w+");
+    if (fp == NULL)
+    {
+        printf("Failed to create passwd file.");
+        exit(1);
+    }
+    fputs("root:x:0:0:root:/root:/bin/sh\n", fp);
+    fclose(fp);
+}
+
+void create_groups()
+{
+    // Create groups file
+    FILE *fp;
+    fp = fopen("/etc/group", "w+");
+    if (fp == NULL)
+    {
+        printf("Failed to create group file.");
+        exit(1);
+    }
+    fputs("root:x:0:\n", fp);
+    fputs("weston-launch:x:16:\n", fp);
+    fclose(fp);
 }
 
 // A helper method to run a command, and direct stdout to the VM output.
@@ -52,7 +87,7 @@ int main()
     printf("Starting VM-OS! \n");
 
     // Remount root read/write
-    mount("", "/", "", MS_REMOUNT, "discard");
+    mount("", "/", "", MS_REMOUNT, "");
     // Create top level directories
     mkdir("/dev", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mkdir("/dev/pts", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -77,7 +112,7 @@ int main()
 
     mkdir("/tmp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mount("tmpfs", "/tmp", "tmpfs", 0, "");
-
+    mkdir("/tmp/.xdg", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mkdir("/sys", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mount("sysfs", "/sys", "sysfs", 0, "");
 
@@ -85,13 +120,59 @@ int main()
     mkdir("/sys/fs/cgroup", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mount("cgroup", "/sys/fs/cgroup", "cgroup2", 0, "");
 
-    // -L indicates the location of seabios
-    // -nic none disables networking support (for now) as we don't have network support (yet)
-    // We use shell expansion to load the ISO image present in images/. (TODO: add better configuration options)    
-    system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/*.iso -L /usr/share/bios/ 2>&1");
+    // Create configuration directory
+    mkdir("/etc", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-    // terminate_system();
+    // 1. As we're running this without systemd (ew), we need to create users/groups manually. See https://bugs.gentoo.org/479468.
+    create_passwd_file();
+    create_groups();
+
+    // Print the current tty as we will eventually use this for weston. For now hard code. Note: we should remove this later.
+    system("/bin/tty");
+
+    // For the main block, we create a new process which runs all.
+    pid_t child = fork();
+    if (child == -1)
+    {
+        printf("Couldn't create fork");
+        exit(1);
+    }
+    else
+    {
+        char command[4096];
+
+        // Create PTS
+        int masterfd, slavefd;
+        char *slavedevice;
+
+        masterfd = posix_openpt(O_RDWR | O_NOCTTY);
+
+        if (masterfd == -1 || grantpt(masterfd) == -1 || unlockpt(masterfd) == -1 || (slavedevice = ptsname(masterfd)) == NULL)
+        {
+            printf("Error: %d", errno);
+            return -1;
+        }
+
+        printf("slave device is: %s\n", slavedevice);
+
+        // Run weston with the appropriate env variables.
+        system("/bin/chmod 700 /tmp/.xdg");
+        setenv("XDG_RUNTIME_DIR", "/tmp/.xdg", 1);
+        sprintf(command, "/bin/weston 2>&1");
+        printf(command);
+        // Launch weston, as root user, and write output to the current tty session
+        system(command);
+
+        // system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/*.iso -L /usr/share/bios/ 2>&1");
+    }
+
+    while (1)
+    {
+        sleep(1);
+        wait(0);
+    }
+
     spinwait();
-
+    // terminate_system();
     return 0;
 }

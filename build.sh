@@ -66,7 +66,8 @@ function build_image() {
     mkdir -p usr/share/bios
     mkdir -p usr/share/ipxe
     mkdir -p usr/share/ipxe.efi
-    
+    mkdir root
+
     copy_linked_libs "/usr/bin/qemu-system-x86_64"
 
     # Copy /lib64/qemu/* to add acceleration libraries
@@ -94,7 +95,6 @@ function build_image() {
     cp /lib64/libdrm.so.2 lib64/libdrm.so.2 
     cp /lib64/libcairo.so.2 lib64/libcairo.so.2
     cp /lib64/libX11.so.6 lib64/libX11.so.6
-    cp /lib64/libwayland-server.so.0 lib64/libwayland-server.so.0 
     cp /lib64/libtiff.so.5 lib64/libtiff.so.5 
     cp /lib64/libgdk_pixbuf-2.0.so.0 lib64/libgdk_pixbuf-2.0.so.0 
     cp /lib64/libexpat.so.1 lib64/libexpat.so.1 
@@ -114,14 +114,29 @@ function build_image() {
     # This is needed for /bin/sh, required to call popen
     cp /lib64/libtinfo.so.6 lib64/libtinfo.so.6
 
+    
+    # Copy dependencies for binaries.
     copy_linked_libs "/usr/sbin/modprobe"
     copy_linked_libs "/bin/ls"
-   
+    copy_linked_libs "/usr/bin/chmod"
+    copy_linked_libs "/usr/sbin/useradd"
+    copy_linked_libs "/usr/sbin/usermod"
+    copy_linked_libs "/usr/sbin/groupadd"
+
+
+    mkdir -p usr/bin
+    cp /usr/bin/chmod bin/chmod
     cp /usr/bin/qemu-system-x86_64 bin/qemu-system-x86_64
     cp /bin/ls bin/ls
     cp /bin/sh bin/sh
     cp /bin/cat bin/cat
     cp /usr/sbin/modprobe bin/modprobe
+    cp /usr/sbin/groupadd bin/groupadd
+    cp /usr/sbin/useradd bin/useradd
+    cp /usr/sbin/usermod bin/usermod
+    cp /usr/bin/id usr/bin/id
+    cp /bin/cat bin/cat
+    cp /usr/bin/tty bin/tty
 
     chmod +x bin/ls bin/qemu-system-x86_64 bin/sh
 
