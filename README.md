@@ -23,3 +23,4 @@ The goal: a single OS for running other OSes (imagine: a modern system booting o
 
 ## Limitations:
 - No networking support added
+- No graphics: only supports OSes that use the serial port/console. 
