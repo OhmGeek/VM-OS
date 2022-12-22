@@ -139,31 +139,7 @@ int main()
     }
     else
     {
-        char command[4096];
-
-        // Create PTS
-        int masterfd, slavefd;
-        char *slavedevice;
-
-        masterfd = posix_openpt(O_RDWR | O_NOCTTY);
-
-        if (masterfd == -1 || grantpt(masterfd) == -1 || unlockpt(masterfd) == -1 || (slavedevice = ptsname(masterfd)) == NULL)
-        {
-            printf("Error: %d", errno);
-            return -1;
-        }
-
-        printf("slave device is: %s\n", slavedevice);
-
-        // Run weston with the appropriate env variables.
-        system("/bin/chmod 700 /tmp/.xdg");
-        setenv("XDG_RUNTIME_DIR", "/tmp/.xdg", 1);
-        sprintf(command, "/bin/weston 2>&1");
-        printf(command);
-        // Launch weston, as root user, and write output to the current tty session
-        system(command);
-
-        // system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/*.iso -L /usr/share/bios/ 2>&1");
+        system("/bin/qemu-system-x86_64 -m 512m -nographic -nic none -cdrom /opt/images/*.iso -L /usr/share/bios/ 2>&1");
     }
 
     while (1)

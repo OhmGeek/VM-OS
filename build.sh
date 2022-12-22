@@ -1,8 +1,13 @@
 #!/bin/bash
 
+apt-get update
+# Install tools to build the linux kernel on Debian.
+apt-get -y install make gcc binutils cpio build-essential linux-source bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev dwarves bison
+
+
 # Build options
 LINUX_BUILD_TYPE="defconfig"
-LINUX_BUILD_PARALLEISM=4
+LINUX_BUILD_PARALLEISM=$(nproc)
 LINUX_ARCH="x86"
 
 function print_options() {
@@ -21,17 +26,22 @@ function build_init() {
 }
 
 function copy_linked_libs() {
-    LIBS=$(ldd $1 | sed 's/.*=>//' | sed 's/(.*)//' | awk 'NR !=1 { print substr($0, 9) }' | xargs)
+    LIBS=$(ldd $1 | sed 's/.*=>//' | sed 's/(.*)//' |  awk 'NR !=1 { print $0 }' | xargs)
 
     echo "Copying ${LIBS} from system to OS."
     for LIB in ${LIBS}
     do
-        cp "/lib64/${LIB}" "lib64/${LIB}"
+        # Create a directory if it doesn't exist.
+        mkdir -p $(dirname "./${LIB}")
+        # Then copy into the fakeroot.
+        cp -f "${LIB}" ".${LIB}"
     done
 
 }
 
 function build_linux() {
+    apt-get update
+    apt-get -y install gmake
     if [ -f linux/arch/${LINUX_ARCH}/boot/bzImage ]; then
         echo "Skipping linux build, as bzImage already exists."
     else
@@ -53,6 +63,7 @@ function build_linux() {
 }
 
 function build_image() {
+    apt-get -y install qemu-system
     mkdir bootdisk/
     cd bootdisk/
 
@@ -66,6 +77,7 @@ function build_image() {
     mkdir -p usr/share/bios
     mkdir -p usr/share/ipxe
     mkdir -p usr/share/ipxe.efi
+    mkdir -p usr/lib/x86_64-linux-gnu
     mkdir root
 
     copy_linked_libs "/usr/bin/qemu-system-x86_64"
